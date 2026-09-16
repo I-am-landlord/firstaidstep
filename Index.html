@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Інтерактивна презентація</title>
+
+  <!-- Локальні стилі та скрипти Swiper -->
+  <link rel="stylesheet" href="css/swiper-bundle.min.css" />
+  <script src="js/swiper-bundle.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      font-family: Arial, sans-serif;
+    }
+
+    .swiper {
+      width: 100%;
+      height: 100%;
+    }
+
+    .swiper-slide {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #000;
+      position: relative;
+    }
+
+    /* Звичайні картинки */
+    .slide-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Навігація */
+    .swiper-button-next, .swiper-button-prev {
+      color: #ffffff;
+      background: rgba(0, 0, 0, 0.4);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      backdrop-filter: blur(4px);
+    }
+
+    .swiper-button-next:after, .swiper-button-prev:after {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .swiper-pagination-bullet {
+      background: #ffffff;
+      opacity: 0.5;
+    }
+    .swiper-pagination-bullet-active {
+      opacity: 1;
+      background: #0096ff;
+    }
+
+    /* Інтерактивний контейнер */
+    .interactive-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .interactive-svg {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+    }
+
+    /* Фігури зі звуком */
+    .clickable-shape {
+      fill: rgba(0, 150, 255, 0.1);
+      stroke: #0096ff;
+      opacity: 0.2;
+      stroke-width: 3;
+      cursor: pointer;
+      transition: fill 0.2s ease, stroke 0.2s ease, filter 0.2s ease;
+    }
+
+    .clickable-shape:active, .clickable-shape.active {
+      fill: rgba(255, 215, 0, 0.9) !important;
+      stroke: #ffd700 !important;
+      stroke-width: 5;
+      filter: drop-shadow(0px 0px 15px #ffd700);
+    }
+
+    /* Кнопки-зони тестів */
+    .btn-zone {
+      fill: rgba(255, 255, 255, 0.01);
+      stroke: transparent;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .btn-zone:active {
+      fill: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Попап модального вікна */
+    .popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.75);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .popup-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .popup-card {
+      width: 90%;
+      max-width: 500px;
+      background: #222;
+      color: #fff;
+      padding: 40px 30px;
+      border-radius: 24px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      border: 4px solid transparent;
+    }
+
+    .popup-icon {
+      font-size: 64px;
+      margin-bottom: 15px;
+    }
+
+    #popup-title {
+      font-size: 32px;
+      margin: 0 0 10px 0;
+    }
+
+    #popup-text {
+      font-size: 20px;
+      color: #ddd;
+      margin-bottom: 25px;
+    }
+
+    .popup-close-btn {
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 15px 40px;
+      font-size: 20px;
+      font-weight: bold;
+      border-radius: 50px;
+      cursor: pointer;
+    }
+
+    /* Анімації */
+    .popup-card.wrong {
+      border-color: #ff3355;
+      animation: popupShake 0.4s ease-in-out;
+    }
+    .popup-card.wrong #popup-title { color: #ff3355; }
+
+    @keyframes popupShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-20px); }
+      40% { transform: translateX(20px); }
+      60% { transform: translateX(-10px); }
+      80% { transform: translateX(10px); }
+    }
+
+    .popup-card.correct {
+      border-color: #00ff88;
+      animation: popupPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .popup-card.correct #popup-title { color: #00ff88; }
+
+    @keyframes popupPop {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Прозорі зони за замовчуванням */
+    .clean-choice-btn {
+      fill: rgba(255, 255, 255, 0.01);
+      stroke: transparent;
+      stroke-width: 6;
+      cursor: pointer;
+      transition: fill 0.3s ease, stroke 0.3s ease;
+    }
+
+    .clean-choice-btn.is-found {
+      fill: rgba(0, 255, 136, 0.25) !important;
+      stroke: #00ff88 !important;
+      pointer-events: none;
+    }
+
+    .clean-choice-btn.is-wrong {
+      animation: wrongFlash 0.5s ease-in-out;
+    }
+
+    @keyframes wrongFlash {
+      0%, 100% { fill: rgba(255, 255, 255, 0.01); stroke: transparent; }
+      50% { fill: rgba(255, 51, 85, 0.4); stroke: #ff3355; }
+    }
+
+    .clean-choice-btn.all-complete {
+      animation: successPulse 1s infinite alternate ease-in-out;
+    }
+
+    @keyframes successPulse {
+      0% { fill: rgba(0, 255, 136, 0.3); stroke: #00ff88; filter: drop-shadow(0 0 5px #00ff88); }
+      100% { fill: rgba(255, 215, 0, 0.5); stroke: #ffd700; filter: drop-shadow(0 0 20px #ffd700); }
+    }
+
+    /* Контейнер для слайда з малюванням */
+    .drawing-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .drawing-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .drawing-tools {
+      position: absolute;
+      bottom: 25px;
+      right: 25px;
+      z-index: 10;
+      display: flex;
+      gap: 12px;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px 15px;
+      border-radius: 30px;
+      backdrop-filter: blur(5px);
+    }
+
+    .color-picker {
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .clear-btn {
+      background: #ff3355;
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+
+    .clear-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Контейнер слайда */
+    .dnd-container {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .dnd-board {
+      position: relative;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+      max-width: 100%;
+      max-height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .dnd-bg {
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .drop-zone {
+      position: absolute;
+      border-radius: 20px;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+
+    .drop-zone.correct-placed {
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.8);
+      border: 3px solid #00ff88;
+    }
+
+    .drag-item {
+      position: absolute;
+      cursor: grab;
+      touch-action: none;
+      box-sizing: border-box;
+      z-index: 20;
+      object-fit: contain;
+      user-select: none;
+    }
+
+    .drag-item.placed {
+      opacity: 1;
+      pointer-events: none;
+    }
+
+    .success-popup {
+      position: absolute;
+      bottom: 2%;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      width: 90%;
+      height: 25%;
+      background: rgba(255, 255, 255, 0.95);
+      border: 4px solid #00ff88;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .success-popup.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .success-popup span {
+      font-size: 28px;
+      font-weight: bold;
+      color: #1a1a1a;
+    }
+
+    .reset-btn {
+      background: #0096ff;
+      color: white;
+      border: none;
+      padding: 10px 25px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .reset-btn:hover {
+      background: #0077cc;
+      transform: scale(1.05);
+    }
+
+    .reset-btn:active {
+      transform: scale(0.95);
+    }
+
+    #slide-10 {
+  position: relative;
+}
+
+#slide-10 .interactive-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Базовий стан прихованих елементів */
+.step-img {
+  position: absolute;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform: scale(0.95);
+  pointer-events: auto;
+}
+
+/* Стан після кліку */
+.step-img.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+  </style>
+</head>
+<body>
+
+  <div class="swiper">
+    <div class="swiper-wrapper">
+
+      <div class="swiper-slide"><img src="Слайди\slide 1.png" alt="Слайд 1" class="slide-img"></div>
+      <div class="swiper-slide"><img src="Слайди\slide 2.png" alt="Слайд 2" class="slide-img"></div>
+      <div class="swiper-slide"><img src="Слайди\slide 3.png" alt="Слайд 3" class="slide-img"></div>
+
+      <!-- Інтерактивний слайд зі звуками -->
+      <div class="swiper-slide">
+        <div class="interactive-container">
+          <svg class="interactive-svg" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMid meet">
+            <image href="Слайди\slide 4.png" width="100%" height="100%" />
+            <path class="clickable-shape" data-sound="sound-home" d="M169.631 146.73C170.53 143.623 172.17 140.781 174.409 138.446L193.209 118.846C194.068 117.951 195.008 117.137 196.018 116.416L252.046 76.396C255.585 73.8678 259.852 72.5624 264.201 72.6777L382.366 75.8108C386.98 75.9332 391.409 77.6473 394.903 80.6627L420.37 102.641C424.002 105.776 428.639 107.5 433.437 107.5H520H553.59C555.52 107.5 557.44 107.779 559.289 108.329L583.802 115.617C589.899 117.43 594.771 122.035 596.923 128.021L604.742 149.767C607.597 157.706 615.126 163 623.562 163H626.403C627.466 163 628.527 162.915 629.577 162.747L647.833 159.813C653.063 158.972 658.413 160.241 662.708 163.34L691.167 183.874C694.006 185.922 696.257 188.679 697.697 191.871L704.325 206.569C706.064 210.423 706.535 214.73 705.673 218.87L704.661 223.729C703.044 231.49 706.164 239.474 712.616 244.083L731.083 257.273C734.905 260.004 737.645 263.992 738.821 268.54L743.182 285.403C744.046 288.744 744.031 292.252 743.138 295.585L738.413 313.224C737.488 316.678 735.654 319.821 733.101 322.325L712.786 342.257C711.272 343.743 709.53 344.978 707.628 345.917L673 363L620 381L561 393.5L494.5 409C489.159 409.843 485.393 414.692 485.898 420.076L486.25 423.83C486.415 425.594 486.25 427.375 485.763 429.079L485.129 431.297C484.078 434.979 481.751 438.166 478.565 440.29C475.914 442.057 472.8 443 469.614 443H454H392.5H356.5H341.151C337.169 443 333.306 441.645 330.197 439.158L329.516 438.613C328.185 437.548 327.074 436.233 326.246 434.743L325.492 433.386C323.645 430.062 320.142 428 316.339 428C315.45 428 314.565 428.113 313.704 428.337L291.488 434.113C290.497 434.371 289.489 434.552 288.47 434.655L250.5 438.5L234.5 440.5H217.5L192.703 437.344C190.909 437.116 189.155 436.645 187.487 435.945L149.5 420L113 399L54.1397 365.71C52.7186 364.906 51.4012 363.932 50.217 362.808L26.4114 340.213C23.8495 337.781 21.9773 334.714 20.9852 331.324L17.3053 318.751C16.7711 316.926 16.5 315.035 16.5 313.133V299.836C16.5 298.284 16.6807 296.737 17.0384 295.227L20.1961 281.894C20.728 279.648 21.6447 277.511 22.9055 275.578L34.0051 258.559C35.3241 256.536 36.9985 254.769 38.9471 253.344L54.6435 241.858C55.8771 240.956 57.2101 240.198 58.6164 239.599L71.3372 234.18C78.7129 231.039 83.5 223.797 83.5 215.78V215.199C83.5 212.754 83.9484 210.329 84.8229 208.046L90.2981 193.749C91.7328 190.003 94.2609 186.775 97.554 184.484L112.811 173.871C114.592 172.632 116.562 171.691 118.645 171.085L141.552 164.421C142.516 164.141 143.5 163.933 144.495 163.801L152.561 162.725C160.424 161.677 166.924 156.081 169.129 148.462L169.631 146.73Z" />
+            <path class="clickable-shape" data-sound="sound-school" d="M995.191 86.1531C997.703 85.0627 1000.41 84.5 1003.15 84.5H1167.48C1172.33 84.5 1177.01 82.7375 1180.66 79.5406L1246.41 21.914C1254.13 15.1482 1265.71 15.3247 1273.22 22.3224L1342.64 87.0093C1346.1 90.2319 1350.59 92.1253 1355.31 92.3538L1472 98L1505.34 102.054C1507.76 102.349 1510.11 103.084 1512.26 104.224L1530.13 113.664C1533.63 115.513 1536.5 118.359 1538.39 121.842L1556.23 154.872C1558.04 158.221 1560.77 160.984 1564.09 162.837L1582.37 173.02C1589.41 176.945 1593.41 184.717 1592.51 192.731L1591.52 201.505C1590.6 209.651 1594.75 217.533 1601.98 221.391L1609.05 225.16C1611.33 226.375 1613.35 228.02 1615 230.004L1627.36 244.828C1629.1 246.921 1630.4 249.347 1631.17 251.959L1639.68 280.723C1640.22 282.565 1640.5 284.475 1640.5 286.396V317.5L1635.92 356.392C1635.64 358.778 1634.94 361.094 1633.83 363.228L1621.91 386.321C1620.33 389.388 1617.98 391.993 1615.09 393.883L1554.58 433.481C1552.55 434.816 1550.28 435.766 1547.9 436.286L1482.61 450.54C1481.21 450.846 1479.78 451 1478.34 451H1412L1269.15 442.284C1266.09 442.097 1263.03 442.617 1260.2 443.803L1252.71 446.944C1250.26 447.971 1247.63 448.5 1244.98 448.5H1125.5L1115.59 448.246C1109.53 448.09 1103.86 445.191 1100.19 440.363L1093.29 431.29C1090.21 427.249 1085.71 424.528 1080.71 423.681L961.5 403.5L886.633 385.263C884.558 384.758 882.577 383.923 880.766 382.791L848.444 362.59C845.215 360.572 842.63 357.674 840.991 354.237L829.475 330.081C825.64 322.038 827.589 312.428 834.254 306.514L844.195 297.693C852.197 290.593 853.195 278.453 846.46 270.142L844.546 267.78C838.901 260.814 838.582 250.944 843.764 243.628L850.278 234.431C851.42 232.819 852.794 231.386 854.355 230.177L858.874 226.679C864.251 222.516 867.144 215.906 866.555 209.131L866.126 204.202C865.722 199.548 866.959 194.899 869.624 191.062L876.088 181.753C877.354 179.93 878.914 178.331 880.705 177.021L897.183 164.964C898.059 164.322 898.987 163.753 899.956 163.262L929.574 148.261C934.284 145.876 937.705 141.538 938.928 136.402C939.308 134.808 939.904 133.274 940.699 131.841L949.949 115.193C951.301 112.758 953.148 110.632 955.37 108.952L970.593 97.4419C971.86 96.4841 973.236 95.6805 974.693 95.0482L995.191 86.1531Z" />
+            <path class="clickable-shape" data-sound="sound-street" d="M936.9 535.575C939.262 533.229 942.174 531.51 945.369 530.573L1065.75 495.307C1067.57 494.772 1069.47 494.5 1071.37 494.5H1455.27C1466.17 494.5 1475 485.668 1475 474.774C1475 465.325 1481.7 457.203 1490.98 455.408L1537 446.5L1594.53 432.782C1599.34 431.635 1603.55 428.747 1606.36 424.675L1658.5 349C1663.14 343.197 1672.5 346.48 1672.5 353.911V738L1671.18 859.501C1671.08 869.081 1664.19 877.241 1654.77 878.959L1582.17 892.195C1581.06 892.398 1579.93 892.506 1578.8 892.518L1257 896H1097L1016.76 890.618C1015.59 890.539 1014.43 890.359 1013.29 890.077L929.755 869.413C923.617 867.895 918.559 863.564 916.114 857.733L895.556 808.711C894.529 806.261 894 803.632 894 800.976V714.754C894 713.256 893.832 711.763 893.498 710.302L871.471 613.822C869.934 607.091 871.978 600.043 876.877 595.178L936.9 535.575Z" />
+            <path class="clickable-shape" data-sound="sound-park" d="M141.327 545.525C142.608 544.182 144.07 543.023 145.671 542.083L178.567 522.756C181.638 520.951 185.136 520 188.698 520H266.258L339.124 513.543C343.121 513.189 346.918 511.641 350.024 509.101L365.532 496.412C366.679 495.474 367.927 494.666 369.252 494.003L392.119 482.57C395.477 480.89 399.24 480.191 402.977 480.55L421.558 482.337C422.689 482.445 423.809 482.65 424.906 482.949L441.503 487.476C447.354 489.072 452.165 493.236 454.583 498.797L455.779 501.549C458.826 508.556 465.599 513.215 473.232 513.554L544.544 516.724C548.591 516.904 552.597 515.85 556.032 513.704L561.35 510.38C564.868 508.181 568.983 507.131 573.124 507.374L586.365 508.153C590.212 508.38 593.911 509.712 597.018 511.991L603.186 516.514C605.859 518.474 608.002 521.067 609.424 524.061L613.559 532.765C615.622 537.109 619.181 540.564 623.585 542.497L657.758 557.5L721.758 584.5L745.214 595.564C747.229 596.515 749.071 597.795 750.664 599.353L764.74 613.116C768.589 616.879 770.758 622.034 770.758 627.416V647.104C770.758 651.572 772.254 655.912 775.008 659.43L786.243 673.787C787.903 675.907 789.117 678.34 789.813 680.941L804.856 737.13C805.453 739.36 805.659 741.676 805.466 743.976L800.802 799.517C800.448 803.73 798.768 807.723 796.003 810.922L754.011 859.501C750.94 863.053 746.718 865.412 742.084 866.164L618.349 886.242C617.29 886.414 616.219 886.5 615.146 886.5H504.672C500.21 886.5 495.896 888.096 492.508 891C489.12 893.904 484.805 895.5 480.343 895.5H373.258H335.258H213.258L105.962 889.726C103.189 889.577 100.479 888.852 98.0019 887.598L65.1071 870.943C63.2195 869.987 61.4956 868.738 59.9995 867.242L36.3595 843.602C33.6802 840.922 31.8172 837.537 30.9873 833.84L0.483999 697.962C-0.318046 694.389 -0.123869 690.665 1.04536 687.195L14.0378 648.637C14.5163 647.217 15.1529 645.855 15.9356 644.577L34.4096 614.415C37.4843 609.396 42.6142 605.985 48.4327 605.093L104.938 596.426C114.186 595.008 121.215 587.368 121.859 578.034L122.261 572.201C122.582 567.547 124.52 563.152 127.739 559.776L141.327 545.525Z" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="swiper-slide"><img src="Слайди\slide 5.png" alt="Слайд 5" class="slide-img"></div>
+      <div class="swiper-slide"><img src="Слайди\slide 6.jpg" alt="Слайд 6" class="slide-img"></div>
+      <div class="swiper-slide"><img src="Слайди\slide 7_12.jpg" alt="Слайд 7" class="slide-img"></div>
+      <div class="swiper-slide"><img src="Слайди\slide 8_14_16.jpg" alt="Слайд 7" class="slide-img"></div>
+      
+      <div class="swiper-slide slide-step-trigger" id="slide-10">
+      <img src="Слайди\slide 9.png" alt="Слайд 8" class="slide-img">
+      
+      <!-- Контейнер для елементів, що з'являються по кліку -->
+      <div class="interactive-overlay">
+        <!-- Крок 1: Картинка 1 (змініть top, left, width та src під ваші координати) -->
+        <img src="Слайди\Помітити.png" 
+            class="step-img" 
+            data-step="1" 
+            style="top: 35%; left: 10%; width: 20%;" 
+            alt="Елемент 1">
+
+        <!-- Крок 2: Картинка 2 -->
+        <img src="Слайди\ЗУпинитись.png" 
+            class="step-img" 
+            data-step="2" 
+            style="top: 35%; left: 40%; width: 20%;" 
+            alt="Елемент 2">
+
+        <!-- Крок 3: Картинка 3 -->
+        <img src="Слайди\Подумати.png" 
+            class="step-img" 
+            data-step="3" 
+            style="top: 35%; left: 70%; width: 20%;" 
+            alt="Елемент 3">
+      </div>
+    </div>
+      
+      <!-- Інтерактивний слайд-тест №1 -->
+      <div class="swiper-slide">
+        <div class="interactive-container">
+          <svg class="interactive-svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet">
+            <image href="Слайди\slide 10.png" width="100%" height="100%" />
+            
+            <rect class="btn-zone" 
+            fill="rgba(255, 0, 0, 0.4)" stroke="red" stroke-width="5"
+            data-popup-type="wrong"
+            data-popup-title="Увага!"
+            data-popup-text="Це небезпечна відповідь."
+            x="1450" y="250" width="450" height="650" />
+
+            <!-- Правильна кнопка -->
+            <rect class="btn-zone" 
+            fill="rgba(0, 255, 0, 0.4)" stroke="green" stroke-width="5"
+            data-popup-type="correct"
+            data-popup-title="Чудово!"
+            data-popup-text="Все зроблено вірно."
+            x="50" y="150" width="400" height="650" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="swiper-slide"><img src="Слайди\slide 11.png" alt="Слайд 7" class="slide-img"></div>
+      
+      <!-- Слайд з вибором 2 відповідей -->
+      <div class="swiper-slide">
+        <div class="interactive-container">
+          <svg class="interactive-svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet">
+            <image href="Слайди\slide 13.png" width="100%" height="100%" />
+
+            <rect class="clean-choice-btn" 
+                  data-correct="true"
+                  x="40" y="770" width="570" height="260" rx="30" />
+
+            <rect class="clean-choice-btn" 
+                  data-correct="false"
+                  x="665" y="770" width="570" height="260" rx="30" />
+
+            <rect class="clean-choice-btn" 
+                  data-correct="true"
+                  x="1300" y="770" width="570" height="260" rx="30" />
+          </svg>
+        </div>
+      </div>
+
+      
+      <div class="swiper-slide"><img src="Слайди\slide 8_14_16.jpg" alt="Слайд 12" class="slide-img"></div>
+      <div class="swiper-slide"><img src="Слайди\slide 15.png" alt="Слайд 12" class="slide-img"></div>
+      <div class="swiper-slide"><img src="Слайди\slide 8_14_16.jpg" alt="Слайд 12" class="slide-img"></div>
+
+      <!-- Слайд №19 з інтерактивною дошкою для малювання -->
+      <div class="swiper-slide">
+        <div class="drawing-container">
+          <img src="Слайди\slide 17.png" alt="Слайд 19" class="slide-img">
+          <canvas class="drawing-canvas"></canvas>
+          <div class="drawing-tools">
+            <input type="color" class="color-picker" value="#ff3355" title="Обрати колір">
+            <button class="clear-btn">Очистити 🗑️</button>
+          </div>
+        </div>
+      </div>
+
+     <div class="swiper-slide"><img src="Слайди\slide 18.png" alt="Слайд 12" class="slide-img"></div>
+     
+
+      <!-- Drag and Drop Гра -->
+      <div class="swiper-slide">
+        <div class="dnd-container">
+          <div class="dnd-board">
+            <img src="Слайди\slide 19.jpg" alt="Карта" class="dnd-bg">
+
+            <div class="drop-zone" data-target="1" style="top: 41.5%; left: 5.7%;  width: 14.8%; height: 26.2%;"></div>
+            <div class="drop-zone" data-target="2" style="top: 41.5%; left: 24.3%; width: 14.8%; height: 26.2%;"></div>
+            <div class="drop-zone" data-target="3" style="top: 41.5%; left: 42.8%; width: 14.8%; height: 26.2%;"></div>
+            <div class="drop-zone" data-target="4" style="top: 41.5%; left: 61.4%; width: 14.8%; height: 26.2%;"></div>
+            <div class="drop-zone" data-target="5" style="top: 41.5%; left: 79.9%; width: 14.8%; height: 26.2%;"></div>
+
+            <img src="Слайди\1.png" class="drag-item" data-id="2" style="top: 73.8%; left: 9.3%;  width: 12.58%; height: 22.27%;" alt="Гучномовець">
+            <img src="Слайди\2.png" class="drag-item" data-id="1" style="top: 73.8%; left: 27.9%; width: 12.58%; height: 22.27%;" alt="Мозок">
+            <img src="Слайди\3.png" class="drag-item" data-id="4" style="top: 73.8%; left: 46.4%; width: 12.58%; height: 22.27%;" alt="Сліди">
+            <img src="Слайди\4.png" class="drag-item" data-id="3" style="top: 73.8%; left: 65.0%; width: 12.58%; height: 22.27%;" alt="Очі">
+            <img src="Слайди\5.png" class="drag-item" data-id="5" style="top: 73.8%; left: 83.5%; width: 12.58%; height: 22.27%;" alt="Долоня">
+
+            <div class="success-popup" id="success-popup">
+              <span>Все вірно! 🎉</span>
+              <button class="reset-btn" onclick="resetGame()">Спробувати знову 🔄</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="swiper-slide"><img src="Слайди\slide 18.png" alt="Слайд 17" class="slide-img"></div>
+            
+   
+      <div class="swiper-slide"><img src="Слайди\slide 21.jpg" alt="Слайд 20" class="slide-img"></div>
+     
+   <!-- Слайд №23 з інтерактивною дошкою для малювання -->
+      <div class="swiper-slide">
+        <div class="drawing-container">
+          <img src="Слайди\slide 22.png" alt="Слайд 23" class="slide-img">
+          <canvas class="drawing-canvas"></canvas>
+          <div class="drawing-tools">
+            <input type="color" class="color-picker" value="#ff3355" title="Обрати колір">
+            <button class="clear-btn">Очистити 🗑️</button>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="swiper-slide"><img src="Слайди\slide 23.png" alt="Слайд 19" class="slide-img"></div>
+      <div class="swiper-slide"><img src="Слайди\slide 24.png" alt="Слайд 20" class="slide-img"></div>
+      <div class="swiper-slide"><img src="Слайди\slide 25.png" alt="Слайд 20" class="slide-img"></div>
+
+    </div>
+
+    <div class="swiper-button-next"></div>
+    <div class="swiper-button-prev"></div>
+    <div class="swiper-pagination"></div>
+  </div>
+
+  <audio id="sound-home" src="sounds/Voicy_Kitchen Tools Sound.mp3" preload="auto"></audio>
+  <audio id="sound-school" src="sounds/Voicy_Students talking .mp3" preload="auto"></audio>
+  <audio id="sound-street" src="sounds\mixkit-road-construction-ambience-loop-807.wav.m4a" preload="auto"></audio>
+  <audio id="sound-park" src="sounds/mixkit-little-birds-singing-in-the-trees-17.wav" preload="auto"></audio>
+
+  <div id="popup-modal" class="popup-overlay">
+    <div class="popup-card" id="popup-card">
+      <div class="popup-icon" id="popup-icon"></div>
+      <h2 id="popup-title"></h2>
+      <p id="popup-text"></p>
+      <button class="popup-close-btn" id="popup-close">Зрозуміло</button>
+    </div>
+  </div>
+
+  <script>
+    const swiper = new Swiper('.swiper', {
+      navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+      pagination: { el: '.swiper-pagination', clickable: true },
+      keyboard: { enabled: true, onlyInViewport: true },
+      touchEventsTarget: 'wrapper',
+      threshold: 10,
+    });
+
+    document.querySelectorAll('.clickable-shape').forEach(shape => {
+      shape.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        const soundId = shape.getAttribute('data-sound');
+        const audio = document.getElementById(soundId);
+
+        if (audio) {
+          audio.currentTime = 0;
+          audio.play().catch(err => console.log("Помилка аудіо:", err));
+          setTimeout(() => audio.pause(), 2500);
+        }
+
+        shape.classList.add('active');
+        setTimeout(() => shape.classList.remove('active'), 2500);
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const popupModal = document.getElementById('popup-modal');
+      const popupCard = document.getElementById('popup-card');
+      const popupIcon = document.getElementById('popup-icon');
+      const popupTitle = document.getElementById('popup-title');
+      const popupText = document.getElementById('popup-text');
+      const popupClose = document.getElementById('popup-close');
+
+      function showPopup(type, title, text) {
+        if (!popupModal) return;
+        const icon = (type === 'correct') ? '🎉' : '❌';
+        
+        popupCard.className = 'popup-card ' + type;
+        popupIcon.textContent = icon;
+        popupTitle.textContent = title || (type === 'correct' ? 'Правильно!' : 'Помилка!');
+        popupText.textContent = text || '';
+        
+        popupModal.classList.add('active');
+      }
+
+      if (popupClose) {
+        popupClose.addEventListener('click', () => {
+          popupModal.classList.remove('active');
+        });
+      }
+
+      document.addEventListener('pointerdown', (e) => {
+        const btn = e.target.closest('.btn-zone');
+        if (btn) {
+          e.stopPropagation();
+          const type = btn.getAttribute('data-popup-type') || (btn.classList.contains('correct-btn') ? 'correct' : 'wrong');
+          const title = btn.getAttribute('data-popup-title');
+          const text = btn.getAttribute('data-popup-text');
+          showPopup(type, title, text);
+        }
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('pointerdown', (e) => {
+        const btn = e.target.closest('.clean-choice-btn');
+        if (!btn || btn.classList.contains('is-found')) return;
+
+        e.stopPropagation();
+
+        const isCorrect = btn.getAttribute('data-correct') === 'true';
+        const slide = btn.closest('.swiper-slide');
+
+        if (isCorrect) {
+          btn.classList.add('is-found');
+
+          const totalCorrect = slide.querySelectorAll('.clean-choice-btn[data-correct="true"]').length;
+          const foundCorrect = slide.querySelectorAll('.clean-choice-btn.is-found').length;
+
+          if (foundCorrect === totalCorrect) {
+            slide.querySelectorAll('.clean-choice-btn.is-found').forEach(el => {
+              el.classList.add('all-complete');
+            });
+          }
+        } else {
+          btn.classList.remove('is-wrong');
+          void btn.offsetWidth;
+          btn.classList.add('is-wrong');
+        }
+      });
+    });
+
+   document.addEventListener('DOMContentLoaded', () => {
+  const drawingContainers = document.querySelectorAll('.drawing-container');
+
+  drawingContainers.forEach(container => {
+    const canvas = container.querySelector('.drawing-canvas');
+    const colorPicker = container.querySelector('.color-picker');
+    const clearBtn = container.querySelector('.clear-btn');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(canvas, 0, 0);
+
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+
+      ctx.drawImage(tempCanvas, 0, 0, rect.width, rect.height);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 5;
+    }
+
+    if (typeof swiper !== 'undefined') {
+      swiper.on('slideChangeTransitionEnd', resizeCanvas);
+      swiper.on('resize', resizeCanvas);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    setTimeout(resizeCanvas, 200);
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    function startDrawing(e) {
+      isDrawing = true;
+      if (typeof swiper !== 'undefined') swiper.allowTouchMove = false;
+      const pos = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const pos = getPos(e);
+      ctx.strokeStyle = colorPicker ? colorPicker.value : '#ff3355';
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+    }
+
+    function stopDrawing() {
+      if (!isDrawing) return;
+      isDrawing = false;
+      ctx.closePath();
+      if (typeof swiper !== 'undefined') swiper.allowTouchMove = true;
+    }
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDrawing);
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      startDrawing(e);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.stopPropagation();
+      draw(e);
+    }, { passive: false });
+
+    window.addEventListener('touchend', stopDrawing);
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      });
+    }
+  });
+});
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const items = document.querySelectorAll('.drag-item');
+      const dropZones = document.querySelectorAll('.drop-zone');
+      const popup = document.getElementById('success-popup');
+
+      items.forEach(item => {
+        let active = false;
+        let shiftX = 0, shiftY = 0;
+
+        item.setAttribute('data-start-left', item.style.left);
+        item.setAttribute('data-start-top', item.style.top);
+        item.setAttribute('data-start-width', item.style.width);
+        item.setAttribute('data-start-height', item.style.height);
+
+        item.addEventListener('pointerdown', (e) => {
+          if (item.classList.contains('placed')) return;
+          e.stopPropagation();
+
+          active = true;
+          const rect = item.getBoundingClientRect();
+
+          shiftX = e.clientX - rect.left;
+          shiftY = e.clientY - rect.top;
+
+          item.style.zIndex = '1000';
+          item.style.cursor = 'grabbing';
+
+          function onPointerMove(moveEvent) {
+            if (!active) return;
+            
+            const boardRect = item.closest('.dnd-board').getBoundingClientRect();
+            const x = moveEvent.clientX - boardRect.left - shiftX;
+            const y = moveEvent.clientY - boardRect.top - shiftY;
+
+            item.style.left = `${(x / boardRect.width) * 100}%`;
+            item.style.top = `${(y / boardRect.height) * 100}%`;
+          }
+
+          function onPointerUp(upEvent) {
+            if (!active) return;
+            active = false;
+
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+
+            item.style.zIndex = '20';
+            item.style.cursor = 'grab';
+
+            const itemRect = item.getBoundingClientRect();
+            const itemId = item.getAttribute('data-id');
+            let placed = false;
+
+            dropZones.forEach(zone => {
+              const zoneRect = zone.getBoundingClientRect();
+              const targetId = zone.getAttribute('data-target');
+
+              const centerX = itemRect.left + itemRect.width / 2;
+              const centerY = itemRect.top + itemRect.height / 2;
+
+              if (
+                centerX >= zoneRect.left &&
+                centerX <= zoneRect.right &&
+                centerY >= zoneRect.top &&
+                centerY <= zoneRect.bottom
+              ) {
+                if (itemId === targetId) {
+                  placed = true;
+                  zone.classList.add('correct-placed');
+                  item.classList.add('placed');
+
+                  item.style.left = zone.style.left;
+                  item.style.top = zone.style.top;
+                  item.style.width = zone.style.width;
+                  item.style.height = zone.style.height;
+
+                  checkWinCondition();
+                }
+              }
+            });
+
+            if (!placed) {
+              item.style.left = item.getAttribute('data-start-left');
+              item.style.top = item.getAttribute('data-start-top');
+            }
+          }
+
+          document.addEventListener('pointermove', onPointerMove);
+          document.addEventListener('pointerup', onPointerUp);
+        });
+      });
+
+      function checkWinCondition() {
+        const placedItems = document.querySelectorAll('.drag-item.placed');
+        if (placedItems.length === 5) {
+          setTimeout(() => {
+            popup.classList.add('show');
+          }, 300);
+        }
+      }
+
+      window.resetGame = function() {
+        popup.classList.remove('show');
+        dropZones.forEach(zone => zone.classList.remove('correct-placed'));
+
+        items.forEach(item => {
+          item.classList.remove('placed');
+          item.style.left = item.getAttribute('data-start-left');
+          item.style.top = item.getAttribute('data-start-top');
+          item.style.width = item.getAttribute('data-start-width');
+          item.style.height = item.getAttribute('data-start-height');
+        });
+      };
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+  const slide10 = document.getElementById('slide-10');
+  if (!slide10) return;
+
+  let currentStep = 0;
+  const stepImages = slide10.querySelectorAll('.step-img');
+  const totalSteps = stepImages.length;
+
+  slide10.addEventListener('click', (e) => {
+    // Ігноруємо кліки по стрілках Swiper
+    if (e.target.closest('.swiper-button-next, .swiper-button-prev')) return;
+
+    if (currentStep < totalSteps) {
+      currentStep++;
+      const nextImg = slide10.querySelector(`.step-img[data-step="${currentStep}"]`);
+      if (nextImg) {
+        nextImg.classList.add('visible');
+      }
+    }
+  });
+
+  // Скидання при поверненні на слайд
+  if (typeof swiper !== 'undefined') {
+    swiper.on('slideChange', () => {
+      if (swiper.slides[swiper.activeIndex] !== slide10) {
+        currentStep = 0;
+        stepImages.forEach(img => img.classList.remove('visible'));
+      }
+    });
+  }
+});
+  </script>
+</body>
+</html>
